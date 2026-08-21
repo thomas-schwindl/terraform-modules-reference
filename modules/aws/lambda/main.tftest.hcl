@@ -1,20 +1,28 @@
+# main.tftest.hcl
+
 mock_provider "aws" {
-  mock_data "aws_caller_identity.current" {
-    attributes = {
+  override_data {
+    target = aws_caller_identity.current
+    
+    values = {
       account_id = "123456789012"
       arn        = "arn:aws:iam::123456789012:user/test"
     }
   }
 
-  mock_data "aws_partition.this" {
-    attributes = {
+  override_data {
+    target = data.aws_partition.this
+    
+    values = {
       partition = "aws"
       region    = "eu-central-1"
     }
   }
 
-  mock_resource "aws_lambda_function" {
-    attributes = {
+  override_resource {
+    target = aws_lambda_function.this
+    
+    values = {
       function_name = "test-function-${var.environment}"
       arn           = "arn:aws:lambda:eu-central-1:123456789012:function:test-${var.environment}"
       invoke_url    = "https://lambda.eu-central-1.amazonaws.com/2015-03-31/functions/test-${var.environment}/invocations"
@@ -36,8 +44,10 @@ mock_provider "aws" {
     }
   }
 
-  mock_resource "aws_iam_role" {
-    attributes = {
+  override_resource {
+    target = aws_iam_role.this
+    
+    values = {
       name = "${var.function_name}-${var.environment}-role"
       arn  = "arn:aws:iam::123456789012:role/${var.function_name}-${var.environment}-role"
     }
