@@ -9,9 +9,11 @@ terraform {
   }
 }
 
+# ✅ Datenquelle für Partition/Region hinzufügen
+data "aws_partition" "this" {}
+
 locals {
-  function_name  = "${var.function_name}-${var.environment}"
-  runtime_family = substr(var.runtime, 0, 4)
+  function_name = "${var.function_name}-${var.environment}"
 }
 
 resource "aws_lambda_function" "this" {

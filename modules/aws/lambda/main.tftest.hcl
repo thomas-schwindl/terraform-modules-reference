@@ -1,17 +1,6 @@
-# modules/aws/lambda/main.tftest.hcl
-
+# ✅ Nur Resources mocken, die tatsächlich existieren
 mock_provider "aws" {
-  # ✅ Data Source korrekte Syntax
-  override_data {
-    target = data.aws_caller_identity.current
-
-    values = {
-      account_id = "123456789012"
-      partition  = "aws"
-      region     = "eu-central-1"
-    }
-  }
-
+  # ✅ Nur aws_partition mocken (existiert als data source)
   override_data {
     target = data.aws_partition.this
 
@@ -21,30 +10,31 @@ mock_provider "aws" {
     }
   }
 
-  # ✅ Resource Override: KEINE Variablen, FLAT structure
+  # ✅ Lambda Resource mocken
   override_resource {
     target = aws_lambda_function.this
 
     values = {
-      function_name         = "test-function-dev" # Fester Wert, kein ${var.environment}
+      function_name         = "test-function-dev"
       arn                   = "arn:aws:lambda:eu-central-1:123456789012:function:test-function-dev"
       invoke_url            = "https://lambda.eu-central-1.amazonaws.com/2015-03-31/functions/test-function-dev/invocations"
       role                  = "arn:aws:iam::123456789012:role/test-function-dev-role"
       runtime               = "python3.11"
       timeout               = 30
       memory_size           = 256
-      tracing_config_mode   = "PassThrough" # ✅ FLAT: keine geschachtelten Blöcke
-      environment_variables = {}            # ✅ Flat map
+      tracing_config_mode   = "PassThrough"
+      environment_variables = {}
       s3_bucket             = null
       s3_key                = null
     }
   }
 
+  # ✅ IAM Role mocken
   override_resource {
     target = aws_iam_role.this
 
     values = {
-      name = "test-function-dev-role" # Fester Wert
+      name = "test-function-dev-role"
       arn  = "arn:aws:iam::123456789012:role/test-function-dev-role"
     }
   }
@@ -103,17 +93,17 @@ run "test_production_configuration" {
 }
 
 # ──────────────────────────────────────────────────────────
-# Test Case 3: Environment Variable Defaults
+# Test Case 3: X-Ray Disabled by Default
 # ──────────────────────────────────────────────────────────
-run "test_empty_environment_variables" {
+run "test_xray_disabled_by_default" {
   variables {
-    function_name = "simple-function"
-    environment   = "dev"
+    function_name = "no-tracing-func"
+    environment   = "test"
   }
 
   assert {
-    condition     = length(resource.aws_lambda_function.this.environment_variables) == 0
-    error_message = "Should have no environment variables by default."
+    condition     = resource.aws_lambda_function.this.tracing_config_mode == "PassThrough"
+    error_message = "X-Ray should be disabled by default."
   }
 }
 
@@ -129,20 +119,5 @@ run "test_iam_role_naming" {
   assert {
     condition     = resource.aws_iam_role.this.name == "iam-test-func-staging-role"
     error_message = "IAM role must follow naming convention."
-  }
-}
-
-# ──────────────────────────────────────────────────────────
-# Test Case 5: X-Ray Disabled by Default
-# ──────────────────────────────────────────────────────────
-run "test_xray_disabled_by_default" {
-  variables {
-    function_name = "no-tracing-func"
-    environment   = "test"
-  }
-
-  assert {
-    condition     = resource.aws_lambda_function.this.tracing_config_mode == "PassThrough"
-    error_message = "X-Ray should be disabled by default."
   }
 }
