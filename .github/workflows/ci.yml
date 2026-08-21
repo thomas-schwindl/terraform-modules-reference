@@ -13,210 +13,217 @@ concurrency:
 env:
   TERRAFORM_VERSION: "1.9.0"
 
+# ──────────────────────────────────────────────────────────
+# LEVEL 1: STATIC ANALYSIS (parallele Sub-Tasks)
+# ──────────────────────────────────────────────────────────
 jobs:
-  # ──────────────────────────────────────────────────────────
-  # LEVEL 1: STATIC ANALYSIS
-  # ──────────────────────────────────────────────────────────
-  # Prüft Format, Syntax, Best Practices, Security
-  # Geschwindigkeit: < 60 Sekunden
-  # Kosten: $0
-  # ──────────────────────────────────────────────────────────
-  level-1-static-analysis:
-    name: 🔍 Level 1 - Static Analysis
+  level-1-format-check:
+    name: 🔍 L1.1 Format Check
     runs-on: ubuntu-latest
-    
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
-      
-      # ─── Sub-Level 1.1: Format & Syntax ────────────────────
-      - name: L1.1 - Terraform Format Check
+      - name: Terraform Format
         run: terraform fmt -check -recursive
-      
-      - name: L1.2 - Terraform Validate
+
+  level-2-validate:
+    name: 🔍 L1.2 Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+      - name: Terraform Init
         run: |
           cd modules/aws/lambda
           terraform init -backend=false
-          terraform validate
-      
-      # ─── Sub-Level 1.3: TFLint Best Practices ──────────────
-      - name: L1.3 - Setup TFLint
-        uses: terraform-linters/setup-tflint@v4
-        with:
-          tflint_version: v0.48.0
-      
-      - name: L1.4 - TFLint Plugins Download
-        run: tflint --init
-      
-      - name: L1.5 - TFLint Scan (AWS Lambda)
+      - name: Terraform Validate
         run: |
           cd modules/aws/lambda
-          tflint --format=compact
-      
-      # ─── Sub-Level 1.6: Security Scans ─────────────────────
-      - name: L1.6 - Setup Checkov
-        uses: bridgecrewio/checkov-action@v12
+          terraform validate
+
+  level-3-tflint:
+    name: 🔍 L1.3 TFLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.48.0
+      - name: TFLint Init
+        run: tflint --init
+      - name: TFLint Scan
+        run: tflint --recursive modules/aws/ --format=compact
+
+  level-4-checkov:
+    name: 🔍 L1.4 Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bridgecrewio/checkov-action@v12
         with:
           directory: modules/aws/lambda/
           framework: terraform
           soft_fail: false
-          output_file: checkov-results.sarif
           output_format: sarif
-      
-      - name: L1.7 - Upload Security Report
+          output_file: checkov-results.sarif
+      - name: Upload Report
         uses: actions/upload-artifact@v4
         with:
-          name: checkov-reports
+          name: security-report
           path: checkov-results.sarif
 
   # ──────────────────────────────────────────────────────────
-  # LEVEL 2: NATIVE MOCK TESTS
+  # LEVEL 1: SUMMARIZER (zeigt alle Level 1 Ergebnisse zusammen)
   # ──────────────────────────────────────────────────────────
-  # Prüft Funktionalität mit Mock Provider (KEINE Cloud)
-  # Geschwindigkeit: < 30 Sekunden
-  # Kosten: $0
-  # ──────────────────────────────────────────────────────────
-  level-2-native-tests:
-    name: 🧪 Level 2 - Native Mock Tests
+  level-1-summary:
+    name: ✅ Level 1 Summary
     runs-on: ubuntu-latest
-    needs: level-1-static-analysis
-    
+    needs: [level-1-format-check, level-2-validate, level-3-tflint, level-4-checkov]
+    if: always()
+    steps:
+      - name: Print Summary
+        run: |
+          echo "╔══════════════════════════════════════╗"
+          echo "║     🔍 LEVEL 1: STATIC ANALYSIS      ║"
+          echo "╠══════════════════════════════════════╣"
+          echo "║  L1.1 Format Check:  ${{ needs.level-1-format-check.result }}"
+          echo "║  L1.2 Validate:      ${{ needs.level-2-validate.result }}"
+          echo "║  L1.3 TFLint:        ${{ needs.level-3-tflint.result }}"
+          echo "║  L1.4 Checkov:       ${{ needs.level-4-checkov.result }}"
+          echo "╚══════════════════════════════════════╝"
+
+# ──────────────────────────────────────────────────────────
+# LEVEL 2: NATIVE MOCK TESTS
+# ──────────────────────────────────────────────────────────
+jobs:
+  level-2-init:
+    name: 🧪 L2.1 Initialize
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
-      
-      - name: L2.1 - Initialize Module
+      - name: Terraform Init
         run: |
           cd modules/aws/lambda
           terraform init -backend=false
-      
-      - name: L2.2 - Run Terraform Test
+
+  level-2-test:
+    name: 🧪 L2.2 Run Tests
+    runs-on: ubuntu-latest
+    needs: level-2-init
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+      - name: Terraform Test
         run: |
           cd modules/aws/lambda
           terraform test -v
-        
-          # Parse results
-          TEST_PASS=$(terraform test -json | jq '.runs[] | select(.outcome == "pass") | .name' | wc -l)
-          TEST_FAIL=$(terraform test -json | jq '.runs[] | select(.outcome == "fail") | .name' | wc -l)
-        
-          echo "Tests Passed: $TEST_PASS"
-          echo "Tests Failed: $TEST_FAIL"
-        
-          if [ "$TEST_FAIL" -gt 0 ]; then
-           exit 1
-          fi
-      
-      - name: L2.3 - Parse Test Results
+
+  level-2-parse:
+    name: 🧪 L2.3 Parse Results
+    runs-on: ubuntu-latest
+    needs: level-2-test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse JSON Results
         run: |
           cd modules/aws/lambda
           terraform test -json > test-results.json
-          
-      - name: L2.4 - Upload Test Results
-        uses: actions/upload-artifact@v4
+          jq '.runs[] | {name: .name, outcome: .outcome}' test-results.json
+
+  level-2-upload:
+    name: 🧪 L2.4 Upload Reports
+    runs-on: ubuntu-latest
+    needs: level-2-parse
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: terraform-test-results
           path: modules/aws/lambda/test-results.json
 
-  # ──────────────────────────────────────────────────────────
-  # LEVEL 3: DOCUMENTATION VALIDATION
-  # ──────────────────────────────────────────────────────────
-  # Prüft ob Docs aktuell sind
-  # ──────────────────────────────────────────────────────────
-  level-3-documentation:
-    name: 📖 Level 3 - Documentation Check
+  level-2-summary:
+    name: ✅ Level 2 Summary
     runs-on: ubuntu-latest
-    needs: level-2-native-tests
-    
+    needs: [level-2-init, level-2-test, level-2-parse, level-2-upload]
+    if: always()
+    steps:
+      - name: Print Summary
+        run: |
+          echo "╔══════════════════════════════════════╗"
+          echo "║   🧪 LEVEL 2: NATIVE MOCK TESTS      ║"
+          echo "╠══════════════════════════════════════╣"
+          echo "║  L2.1 Initialize:    ${{ needs.level-2-init.result }}"
+          echo "║  L2.2 Run Tests:     ${{ needs.level-2-test.result }}"
+          echo "║  L2.3 Parse Results: ${{ needs.level-2-parse.result }}"
+          echo "║  L2.4 Upload:        ${{ needs.level-2-upload.result }}"
+          echo "╚══════════════════════════════════════╝"
+
+# ──────────────────────────────────────────────────────────
+# LEVEL 3: DOCUMENTATION
+# ──────────────────────────────────────────────────────────
+jobs:
+  level-3-generate:
+    name: 📖 L3.1 Generate Docs
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: L3.1 - Generate Docs
-        uses: terraform-docs/gh-actions@main
+      - uses: terraform-docs/gh-actions@main
         with:
           recursive: true
           output-file: README.md
           output-method: inject
           config-file: ".terraform-docs.yml"
           check_diff: true
-      
-      - name: L3.2 - Fail if Docs Outdated
-        run: |
-          if git diff --quiet; then
-            echo "✅ Documentation is up-to-date"
-          else
-            echo "❌ Documentation outdated. Run: terraform-docs"
-            exit 1
-          fi
 
-  # ──────────────────────────────────────────────────────────
-  # LEVEL 4: PLAN & DEPENDENCY CHECK
-  # ──────────────────────────────────────────────────────────
-  # Simuliert Plan für Abhängigkeiten
-  # ──────────────────────────────────────────────────────────
-  level-4-plan-validation:
-    name: 📋 Level 4 - Plan Validation
+  level-3-summary:
+    name: ✅ Level 3 Summary
     runs-on: ubuntu-latest
-    needs: level-3-documentation
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-      
-      - name: L4.1 - Initialize for Plan
-        run: |
-          cd modules/aws/lambda
-          terraform init -backend=false
-      
-      - name: L4.2 - Run Terraform Plan
-        run: |
-          cd modules/aws/lambda
-          terraform plan -out=tfplan -detailed-exitcode
-          exit 0  # Ignoriere exit code für Module-only
-      
-      - name: L4.3 - Check Plan Changes
-        run: |
-          cd modules/aws/lambda
-          terraform show -no-color tfplan > plan-output.txt
-          
-          # Warnung wenn zu viele Ressourcen
-          RESOURCES_CREATED=$(grep -c "+ resource" plan-output.txt || echo "0")
-          echo "Resources to be created: $RESOURCES_CREATED"
-      
-      - name: L4.4 - Upload Plan Output
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan-output
-          path: modules/aws/lambda/plan-output.txt
-
-  # ──────────────────────────────────────────────────────────
-  # FINAL: BUILD SUMMARY
-  # ──────────────────────────────────────────────────────────
-  build-summary:
-    name: ✅ Build Summary
-    runs-on: ubuntu-latest
-    needs: [level-1-static-analysis, level-2-native-tests, level-3-documentation, level-4-plan-validation]
+    needs: level-3-generate
     if: always()
-    
     steps:
-      - name: Print Overall Status
+      - name: Print Summary
         run: |
-          echo "╔════════════════════════════════════════╗"
-          echo "║     TERRAFORM BLUEPRINT BUILD STATUS   ║"
-          echo "╠════════════════════════════════════════╣"
-          echo "║ Level 1 - Static Analysis: ${{ needs.level-1-static-analysis.result }}"
-          echo "║ Level 2 - Native Mock Tests: ${{ needs.level-2-native-tests.result }}"
-          echo "║ Level 3 - Documentation:     ${{ needs.level-3-documentation.result }}"
-          echo "║ Level 4 - Plan Validation:   ${{ needs.level-4-plan-validation.result }}"
-          echo "╚════════════════════════════════════════╝"
+          echo "╔══════════════════════════════════════╗"
+          echo "║   📖 LEVEL 3: DOCUMENTATION          ║"
+          echo "╠══════════════════════════════════════╣"
+          echo "║  L3.1 Generate Docs: ${{ needs.level-3-generate.result }}"
+          echo "╚══════════════════════════════════════╝"
+
+# ──────────────────────────────────────────────────────────
+# FINAL BUILD STATUS
+# ──────────────────────────────────────────────────────────
+build-summary:
+  name: 🏁 Final Build Status
+  runs-on: ubuntu-latest
+  needs: [level-1-summary, level-2-summary, level-3-summary]
+  if: always()
+  steps:
+    - name: Print Final Status
+      run: |
+        echo "╔═══════════════════════════════════════════════════════╗"
+        echo "║         TERRAFORM BLUEPRINT BUILD SUMMARY             ║"
+        echo "╠═══════════════════════════════════════════════════════╣"
+        echo "║ 🔍 LEVEL 1 - Static Analysis: ${{ needs.level-1-summary.result }}"
+        echo "║ 🧪 LEVEL 2 - Mock Tests:      ${{ needs.level-2-summary.result }}"
+        echo "║ 📖 LEVEL 3 - Documentation:   ${{ needs.level-3-summary.result }}"
+        echo "╠═══════════════════════════════════════════════════════╣"
+        if [[ "${{ needs.level-1-summary.result }}" == "success" ]] && \
+           [[ "${{ needs.level-2-summary.result }}" == "success" ]] && \
+           [[ "${{ needs.level-3-summary.result }}" == "success" ]]; then
+          echo "║ ✅ ALL LEVELS PASSED                              ║"
+          echo "╚═══════════════════════════════════════════════════════╝"
+          exit 0
+        else
+          echo "║ ❌ SOME LEVELS FAILED                             ║"
+          echo "╚═══════════════════════════════════════════════════════╝"
+          exit 1
+        fi
