@@ -13,10 +13,10 @@ concurrency:
 env:
   TERRAFORM_VERSION: "1.9.0"
 
-# ──────────────────────────────────────────────────────────
-# LEVEL 1: STATIC ANALYSIS (parallele Sub-Tasks)
-# ──────────────────────────────────────────────────────────
 jobs:
+  # ──────────────────────────────────────────────────────────
+  # LEVEL 1: STATIC ANALYSIS
+  # ──────────────────────────────────────────────────────────
   level-1-format-check:
     name: 🔍 L1.1 Format Check
     runs-on: ubuntu-latest
@@ -77,7 +77,7 @@ jobs:
           path: checkov-results.sarif
 
   # ──────────────────────────────────────────────────────────
-  # LEVEL 1: SUMMARIZER (zeigt alle Level 1 Ergebnisse zusammen)
+  # LEVEL 1: SUMMARY
   # ──────────────────────────────────────────────────────────
   level-1-summary:
     name: ✅ Level 1 Summary
@@ -96,13 +96,13 @@ jobs:
           echo "║  L1.4 Checkov:       ${{ needs.level-4-checkov.result }}"
           echo "╚══════════════════════════════════════╝"
 
-# ──────────────────────────────────────────────────────────
-# LEVEL 2: NATIVE MOCK TESTS
-# ──────────────────────────────────────────────────────────
-jobs:
+  # ──────────────────────────────────────────────────────────
+  # LEVEL 2: NATIVE MOCK TESTS
+  # ──────────────────────────────────────────────────────────
   level-2-init:
     name: 🧪 L2.1 Initialize
     runs-on: ubuntu-latest
+    needs: level-1-summary
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -167,13 +167,13 @@ jobs:
           echo "║  L2.4 Upload:        ${{ needs.level-2-upload.result }}"
           echo "╚══════════════════════════════════════╝"
 
-# ──────────────────────────────────────────────────────────
-# LEVEL 3: DOCUMENTATION
-# ──────────────────────────────────────────────────────────
-jobs:
+  # ──────────────────────────────────────────────────────────
+  # LEVEL 3: DOCUMENTATION
+  # ──────────────────────────────────────────────────────────
   level-3-generate:
     name: 📖 L3.1 Generate Docs
     runs-on: ubuntu-latest
+    needs: level-2-summary
     steps:
       - uses: actions/checkout@v4
       - uses: terraform-docs/gh-actions@main
@@ -198,32 +198,32 @@ jobs:
           echo "║  L3.1 Generate Docs: ${{ needs.level-3-generate.result }}"
           echo "╚══════════════════════════════════════╝"
 
-# ──────────────────────────────────────────────────────────
-# FINAL BUILD STATUS
-# ──────────────────────────────────────────────────────────
-build-summary:
-  name: 🏁 Final Build Status
-  runs-on: ubuntu-latest
-  needs: [level-1-summary, level-2-summary, level-3-summary]
-  if: always()
-  steps:
-    - name: Print Final Status
-      run: |
-        echo "╔═══════════════════════════════════════════════════════╗"
-        echo "║         TERRAFORM BLUEPRINT BUILD SUMMARY             ║"
-        echo "╠═══════════════════════════════════════════════════════╣"
-        echo "║ 🔍 LEVEL 1 - Static Analysis: ${{ needs.level-1-summary.result }}"
-        echo "║ 🧪 LEVEL 2 - Mock Tests:      ${{ needs.level-2-summary.result }}"
-        echo "║ 📖 LEVEL 3 - Documentation:   ${{ needs.level-3-summary.result }}"
-        echo "╠═══════════════════════════════════════════════════════╣"
-        if [[ "${{ needs.level-1-summary.result }}" == "success" ]] && \
-           [[ "${{ needs.level-2-summary.result }}" == "success" ]] && \
-           [[ "${{ needs.level-3-summary.result }}" == "success" ]]; then
-          echo "║ ✅ ALL LEVELS PASSED                              ║"
-          echo "╚═══════════════════════════════════════════════════════╝"
-          exit 0
-        else
-          echo "║ ❌ SOME LEVELS FAILED                             ║"
-          echo "╚═══════════════════════════════════════════════════════╝"
-          exit 1
-        fi
+  # ──────────────────────────────────────────────────────────
+  # FINAL BUILD STATUS
+  # ──────────────────────────────────────────────────────────
+  build-summary:
+    name: 🏁 Final Build Status
+    runs-on: ubuntu-latest
+    needs: [level-1-summary, level-2-summary, level-3-summary]
+    if: always()
+    steps:
+      - name: Print Final Status
+        run: |
+          echo "╔═══════════════════════════════════════════════════════╗"
+          echo "║         TERRAFORM BLUEPRINT BUILD SUMMARY             ║"
+          echo "╠═══════════════════════════════════════════════════════╣"
+          echo "║ 🔍 LEVEL 1 - Static Analysis: ${{ needs.level-1-summary.result }}"
+          echo "║ 🧪 LEVEL 2 - Mock Tests:      ${{ needs.level-2-summary.result }}"
+          echo "║ 📖 LEVEL 3 - Documentation:   ${{ needs.level-3-summary.result }}"
+          echo "╠═══════════════════════════════════════════════════════╣"
+          if [[ "${{ needs.level-1-summary.result }}" == "success" ]] && \
+             [[ "${{ needs.level-2-summary.result }}" == "success" ]] && \
+             [[ "${{ needs.level-3-summary.result }}" == "success" ]]; then
+            echo "║ ✅ ALL LEVELS PASSED                              ║"
+            echo "╚═══════════════════════════════════════════════════════╝"
+            exit 0
+          else
+            echo "║ ❌ SOME LEVELS FAILED                             ║"
+            echo "╚═══════════════════════════════════════════════════════╝"
+            exit 1
+          fi
