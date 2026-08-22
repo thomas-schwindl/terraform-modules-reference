@@ -58,7 +58,7 @@ jobs:
       - name: TFLint Scan
         run: |
           # ✅ --chdir nutzen statt Positional Argument
-          tflint --recursive --chdir=modules/aws/ --format=compact
+          tflint --chdir=modules/aws/ --format=compact
 
   level-4-checkov:
     name: 🔍 L1.4 Security Scan
