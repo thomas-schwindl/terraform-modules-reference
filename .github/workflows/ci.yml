@@ -111,7 +111,7 @@ jobs:
     needs: level-1-summary
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3  # ✅
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
       - name: Terraform Init
@@ -125,7 +125,7 @@ jobs:
     needs: level-2-init
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3  # ✅
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
       - name: Terraform Test
@@ -139,6 +139,9 @@ jobs:
     needs: level-2-test
     steps:
       - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3  # ✅ FEHLT HIER!
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
       - name: Parse JSON Results
         run: |
           cd modules/aws/lambda
