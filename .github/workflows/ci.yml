@@ -155,8 +155,24 @@ jobs:
           path: modules/aws/lambda
       - name: Parse JSON Results
         run: |
+          set -euo pipefail
           cd modules/aws/lambda
-          jq '.runs[] | {name: .name, outcome: .outcome}' test-results.json
+          if [ ! -s test-results.json ]; then
+            echo "ERROR: test-results.json is missing or empty"
+            ls -la test-results.json || true
+            echo "--- raw output ---"
+            cat test-results.json || true
+            exit 1
+          fi
+
+          # Ensure the JSON contains a 'runs' array before iterating
+          if jq -e '.runs != null' test-results.json >/dev/null 2>&1; then
+            jq '.runs[] | {name: .name, outcome: .outcome}' test-results.json
+          else
+            echo "ERROR: test-results.json does not contain 'runs' — terraform test probably failed. Dumping file:"
+            sed -n '1,200p' test-results.json || true
+            exit 1
+          fi
 
   # level-2-upload removed; artifacts are uploaded in level-2-test and downloaded in level-2-parse
 
