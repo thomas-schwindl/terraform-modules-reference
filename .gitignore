@@ -14,3 +14,4 @@ override.tf.json
 /.vscode/
 venv/
 __pycache__/
+**/.terraform/
