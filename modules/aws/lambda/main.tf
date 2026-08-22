@@ -49,6 +49,7 @@ resource "aws_lambda_function" "this" {
     {
       Name        = local.function_name
       Environment = var.environment
+      Partition   = data.aws_partition.this.partition
       ManagedBy   = "terraform"
     },
     var.tags
