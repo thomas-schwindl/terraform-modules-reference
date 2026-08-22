@@ -35,7 +35,9 @@ mock_provider "aws" {
       runtime               = "python3.11"
       timeout               = 30
       memory_size           = 256
-      tracing_config_mode   = "PassThrough"
+      tracing_config = [
+        { mode = "PassThrough" }
+      ]
       environment_variables = {}
       s3_bucket             = null
       s3_key                = null
@@ -59,6 +61,9 @@ run "test_basic_lambda_creation" {
     environment   = "test"
     runtime       = "python3.11"
     handler       = "index.handler"
+    vpc_subnet_ids = []
+    vpc_security_group_ids = []
+    source_archive_filename = "test.zip"
   }
 
   assert {
@@ -81,6 +86,9 @@ run "test_production_configuration" {
     timeout             = 300
     memory_size         = 1024
     enable_xray_tracing = true
+    vpc_subnet_ids = []
+    vpc_security_group_ids = []
+    source_archive_filename = "test.zip"
   }
 
   assert {
@@ -94,7 +102,7 @@ run "test_production_configuration" {
   }
 
   assert {
-    condition     = resource.aws_lambda_function.this.tracing_config_mode == "Active"
+    condition     = resource.aws_lambda_function.this.tracing_config[0].mode == "Active"
     error_message = "X-Ray tracing must be enabled in production."
   }
 }
@@ -103,10 +111,13 @@ run "test_xray_disabled_by_default" {
   variables {
     function_name = "no-tracing-func"
     environment   = "test"
+    vpc_subnet_ids = []
+    vpc_security_group_ids = []
+    source_archive_filename = "test.zip"
   }
 
   assert {
-    condition     = resource.aws_lambda_function.this.tracing_config_mode == "PassThrough"
+    condition     = resource.aws_lambda_function.this.tracing_config[0].mode == "PassThrough"
     error_message = "X-Ray should be disabled by default."
   }
 }
@@ -115,6 +126,9 @@ run "test_iam_role_naming" {
   variables {
     function_name = "iam-test-func"
     environment   = "staging"
+    vpc_subnet_ids = []
+    vpc_security_group_ids = []
+    source_archive_filename = "test.zip"
   }
 
   assert {

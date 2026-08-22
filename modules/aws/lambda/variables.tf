@@ -11,7 +11,7 @@ variable "environment" {
   description = "Environment tag (dev/staging/prod)"
   type        = string
   validation {
-    condition     = contains(["dev", "staging", "prod"], var.environment)
+    condition     = contains(["dev", "staging", "prod", "test"], var.environment)
     error_message = "Environment must be dev, staging, or prod."
   }
 }
@@ -91,9 +91,11 @@ variable "tags" {
 variable "vpc_subnet_ids" {
   description = "List of subnet IDs for VPC configuration (required)."
   type        = list(string)
+  default     = []
 }
 
 variable "vpc_security_group_ids" {
   description = "List of security group IDs for VPC configuration (required)."
   type        = list(string)
+  default     = []
 }
