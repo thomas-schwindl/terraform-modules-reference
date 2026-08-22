@@ -28,13 +28,13 @@ mock_provider "aws" {
     target = aws_lambda_function.this
 
     values = {
-      function_name         = "test-function-dev"
-      arn                   = "arn:aws:lambda:eu-central-1:123456789012:function:test-function-dev"
-      invoke_url            = "https://lambda.eu-central-1.amazonaws.com/2015-03-31/functions/test-function-dev/invocations"
-      role                  = "arn:aws:iam::123456789012:role/test-function-dev-role"
-      runtime               = "python3.11"
-      timeout               = 30
-      memory_size           = 256
+      function_name = "test-function-dev"
+      arn           = "arn:aws:lambda:eu-central-1:123456789012:function:test-function-dev"
+      invoke_url    = "https://lambda.eu-central-1.amazonaws.com/2015-03-31/functions/test-function-dev/invocations"
+      role          = "arn:aws:iam::123456789012:role/test-function-dev-role"
+      runtime       = "python3.11"
+      timeout       = 30
+      memory_size   = 256
       tracing_config = [
         { mode = "PassThrough" }
       ]
@@ -57,12 +57,12 @@ mock_provider "aws" {
 
 run "test_basic_lambda_creation" {
   variables {
-    function_name = "api-handler"
-    environment   = "test"
-    runtime       = "python3.11"
-    handler       = "index.handler"
-    vpc_subnet_ids = []
-    vpc_security_group_ids = []
+    function_name           = "api-handler"
+    environment             = "test"
+    runtime                 = "python3.11"
+    handler                 = "index.handler"
+    vpc_subnet_ids          = []
+    vpc_security_group_ids  = []
     source_archive_filename = "test.zip"
   }
 
@@ -79,15 +79,15 @@ run "test_basic_lambda_creation" {
 
 run "test_production_configuration" {
   variables {
-    function_name       = "critical-job"
-    environment         = "prod"
-    runtime             = "python3.11"
-    handler             = "main.handler"
-    timeout             = 300
-    memory_size         = 1024
-    enable_xray_tracing = true
-    vpc_subnet_ids = []
-    vpc_security_group_ids = []
+    function_name           = "critical-job"
+    environment             = "prod"
+    runtime                 = "python3.11"
+    handler                 = "main.handler"
+    timeout                 = 300
+    memory_size             = 1024
+    enable_xray_tracing     = true
+    vpc_subnet_ids          = []
+    vpc_security_group_ids  = []
     source_archive_filename = "test.zip"
   }
 
@@ -109,10 +109,10 @@ run "test_production_configuration" {
 
 run "test_xray_disabled_by_default" {
   variables {
-    function_name = "no-tracing-func"
-    environment   = "test"
-    vpc_subnet_ids = []
-    vpc_security_group_ids = []
+    function_name           = "no-tracing-func"
+    environment             = "test"
+    vpc_subnet_ids          = []
+    vpc_security_group_ids  = []
     source_archive_filename = "test.zip"
   }
 
@@ -124,10 +124,10 @@ run "test_xray_disabled_by_default" {
 
 run "test_iam_role_naming" {
   variables {
-    function_name = "iam-test-func"
-    environment   = "staging"
-    vpc_subnet_ids = []
-    vpc_security_group_ids = []
+    function_name           = "iam-test-func"
+    environment             = "staging"
+    vpc_subnet_ids          = []
+    vpc_security_group_ids  = []
     source_archive_filename = "test.zip"
   }
 
