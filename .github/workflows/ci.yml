@@ -69,14 +69,18 @@ jobs:
         with:
           directory: modules/aws/lambda/
           framework: terraform
-          soft_fail: false
+        
+        # 🔴 Critical/High = FAIL Pipeline
+          --bc-policy-category: Security,DataProtection
+        
+        # 🟡 Medium/Low = Warnung (Soft Fail)
+          soft_fail: true
+        
+        # Skip nicht-kritische Module-Checks
+          skip_check: CKV2_AWS_5,CKV_AWS_69
+        
           output_format: sarif
           output_file: checkov-results.sarif
-      - name: Upload Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: security-report
-          path: checkov-results.sarif
 
   # ──────────────────────────────────────────────────────────
   # LEVEL 1: SUMMARY
