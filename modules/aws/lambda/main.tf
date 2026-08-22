@@ -36,6 +36,11 @@ resource "aws_lambda_function" "this" {
     mode = var.enable_xray_tracing ? "Active" : "PassThrough"
   }
 
+  vpc_config {
+    subnet_ids         = var.vpc_subnet_ids
+    security_group_ids = var.vpc_security_group_ids
+  }
+
   tags = merge(
     {
       Name        = local.function_name

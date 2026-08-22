@@ -87,3 +87,13 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "vpc_subnet_ids" {
+  description = "List of subnet IDs for VPC configuration (required)."
+  type        = list(string)
+}
+
+variable "vpc_security_group_ids" {
+  description = "List of security group IDs for VPC configuration (required)."
+  type        = list(string)
+}
