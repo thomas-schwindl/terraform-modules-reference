@@ -128,6 +128,10 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
+      - name: Terraform Init
+        run: |
+          cd modules/aws/lambda
+          terraform init -backend=false -input=false
       - name: Terraform Test (JSON)
         run: |
           cd modules/aws/lambda
