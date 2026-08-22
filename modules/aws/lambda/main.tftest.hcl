@@ -1,12 +1,25 @@
-# ✅ Nur Resources mocken, die tatsächlich existieren
 mock_provider "aws" {
-  # ✅ Nur aws_partition mocken (existiert als data source)
+  # ✅ Partition mocken
   override_data {
     target = data.aws_partition.this
 
     values = {
-      partition = "aws"
-      region    = "eu-central-1"
+      partition                      = "aws"
+      dns_suffix                     = "amazonaws.com"
+      cloudfront_distribution_suffix = "cloudfront.amazonaws.com"
+    }
+  }
+
+  # ✅ Region mocken (neu!)
+  override_data {
+    target = data.aws_region.current
+
+    values = {
+      name              = "eu-central-1"
+      id                = "eu-central-1"
+      partition         = "aws"
+      name_by_alias     = "eu-central-1"
+      is_outpost_region = false
     }
   }
 
@@ -40,9 +53,6 @@ mock_provider "aws" {
   }
 }
 
-# ──────────────────────────────────────────────────────────
-# Test Case 1: Basic Creation
-# ──────────────────────────────────────────────────────────
 run "test_basic_lambda_creation" {
   variables {
     function_name = "api-handler"
@@ -62,9 +72,6 @@ run "test_basic_lambda_creation" {
   }
 }
 
-# ──────────────────────────────────────────────────────────
-# Test Case 2: Production Configuration
-# ──────────────────────────────────────────────────────────
 run "test_production_configuration" {
   variables {
     function_name       = "critical-job"
@@ -92,9 +99,6 @@ run "test_production_configuration" {
   }
 }
 
-# ──────────────────────────────────────────────────────────
-# Test Case 3: X-Ray Disabled by Default
-# ──────────────────────────────────────────────────────────
 run "test_xray_disabled_by_default" {
   variables {
     function_name = "no-tracing-func"
@@ -107,9 +111,6 @@ run "test_xray_disabled_by_default" {
   }
 }
 
-# ──────────────────────────────────────────────────────────
-# Test Case 4: IAM Role Naming
-# ──────────────────────────────────────────────────────────
 run "test_iam_role_naming" {
   variables {
     function_name = "iam-test-func"

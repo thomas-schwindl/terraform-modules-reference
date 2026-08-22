@@ -9,8 +9,9 @@ terraform {
   }
 }
 
-# ✅ Datenquelle für Partition/Region hinzufügen
+# ✅ Datenquellen hinzufügen
 data "aws_partition" "this" {}
+data "aws_region" "current" {}
 
 locals {
   function_name = "${var.function_name}-${var.environment}"

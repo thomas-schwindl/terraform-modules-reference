@@ -10,7 +10,7 @@ output "function_arn" {
 
 output "invoke_url" {
   description = "Invoke URL for Lambda function"
-  value       = "https://lambda.${data.aws_partition.this.region}.amazonaws.com/2015-03-31/functions/${aws_lambda_function.this.arn}/invocations"
+  value       = "https://lambda.${data.aws_region.current.name}.amazonaws.com/2015-03-31/functions/${aws_lambda_function.this.arn}/invocations"
 }
 
 output "function_iam_role_arn" {
