@@ -128,36 +128,33 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
-      - name: Terraform Test
+      - name: Terraform Test (JSON)
         run: |
           cd modules/aws/lambda
-          terraform test -v
+          terraform test -json > test-results.json
+          jq '.runs[] | {name: .name, outcome: .outcome}' test-results.json
+      - name: Upload test results artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-test-results
+          path: modules/aws/lambda/test-results.json
 
   level-2-parse:
     name: 🧪 L2.3 Parse Results
     runs-on: ubuntu-latest
     needs: level-2-test
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - name: Download test results artifact
+        uses: actions/download-artifact@v4
         with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          name: terraform-test-results
+          path: modules/aws/lambda
       - name: Parse JSON Results
         run: |
           cd modules/aws/lambda
-          terraform test -json > test-results.json
           jq '.runs[] | {name: .name, outcome: .outcome}' test-results.json
 
-  level-2-upload:
-    name: 🧪 L2.4 Upload Reports
-    runs-on: ubuntu-latest
-    needs: level-2-parse
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/upload-artifact@v4
-        with:
-          name: terraform-test-results
-          path: modules/aws/lambda/test-results.json
+  # level-2-upload removed; artifacts are uploaded in level-2-test and downloaded in level-2-parse
 
   # ──────────────────────────────────────────────────────────
   # LEVEL 2: SUMMARY (Korrigiert mit exit 1)
@@ -165,7 +162,7 @@ jobs:
   level-2-summary:
     name: ✅ Level 2 Summary
     runs-on: ubuntu-latest
-    needs: [level-2-init, level-2-test, level-2-parse, level-2-upload]
+    needs: [level-2-init, level-2-test, level-2-parse]
     if: always()
     steps:
       - name: Check Level 2 Results
