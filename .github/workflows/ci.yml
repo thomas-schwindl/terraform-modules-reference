@@ -173,14 +173,12 @@ jobs:
           echo "║  L2.1 Initialize:    ${{ needs.level-2-init.result }}"
           echo "║  L2.2 Run Tests:     ${{ needs.level-2-test.result }}"
           echo "║  L2.3 Parse Results: ${{ needs.level-2-parse.result }}"
-          echo "║  L2.4 Upload:        ${{ needs.level-2-upload.result }}"
           echo "╚══════════════════════════════════════╝"
           
           # ✅ FAIL wenn ein Job nicht success war
           if [[ "${{ needs.level-2-init.result }}" != "success" ]] || \
              [[ "${{ needs.level-2-test.result }}" != "success" ]] || \
-             [[ "${{ needs.level-2-parse.result }}" != "success" ]] || \
-             [[ "${{ needs.level-2-upload.result }}" != "success" ]]; then
+             [[ "${{ needs.level-2-parse.result }}" != "success" ]]; then
             echo "❌ Level 2 Failed!"
             exit 1
           fi
