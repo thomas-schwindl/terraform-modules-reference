@@ -10,7 +10,6 @@ terraform {
 }
 
 # ✅ Datenquellen hinzufügen
-data "aws_partition" "this" {}
 data "aws_region" "current" {}
 
 locals {
